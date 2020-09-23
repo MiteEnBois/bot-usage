@@ -1,23 +1,20 @@
-import asyncio
 import os
-import yaml
 import discord
 import time
 import sys
 import math
 import re
-import requests
-from random import shuffle
-import random
-import defusedxml.ElementTree as DT
+from random import shuffle, randint
 from datetime import datetime, timedelta
-
-from copy import deepcopy
 from discord.ext import commands
 from discord.ext import tasks
 from dotenv import load_dotenv
 
 # ----------------------------- SETUP VARIABLES GLOBALES ET BOT
+
+global COOLDOWN, DUREE
+DUREE = 10
+COOLDOWN = 0
 
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
@@ -38,7 +35,7 @@ async def ping(ctx):
 @bot.command(name='saucisson', help='Pong!')
 async def saucisson(ctx, *arr):
     limit = 64
-    num = random.randint(0, 99)
+    num = randint(0, 99)
     if ctx.author.id == 243312493730988032:
         num -= 20
     if num >= limit:
@@ -72,7 +69,7 @@ async def boule(ctx, *arr):
         if str[-1] != ' ':
             str += ' '
         str += '?'
-    await ctx.send(f"{str.capitalize()} : 🎱**{boule[random.randint(0, 19)]}**🎱")
+    await ctx.send(f"{str.capitalize()} : 🎱**{boule[randint(0, 19)]}**🎱")
 
 
 @bot.command(name='bouleuh', help='Pong!')
@@ -82,7 +79,7 @@ async def bouleuh(ctx, *arr):
 
 @bot.command(name='usage', help='compte les messages de chaque canal dans les x derniers jours. usage: ;usage <jours(defaut 7)> <limite message(defaut 500)>')
 async def usage(ctx, jours=7, lim=1000):
-    datef = time.time()-jours*3600*24
+    datef = datetime.fromtimestamp(time.time())-timedelta(days=jours)
     ttttime = time.time()
     channels = {}
 
@@ -102,10 +99,12 @@ async def usage(ctx, jours=7, lim=1000):
                     }
                     i = 0
                     temptime = time.time()
+                    # msglist = await chan.history(limit=lim, after=datef).flatten()
+                    # i = len(msglist)
                     async for message in chan.history(limit=lim):
                         if message.author == bot.user:
                             continue
-                        if (message.created_at-datetime(1970, 1, 1)).total_seconds() < datef:
+                        if message.created_at <= datef:
                             break
                         i += 1
                     channels[chan.id]["score"] = i
@@ -134,7 +133,6 @@ async def usage(ctx, jours=7, lim=1000):
             txt += "🟨 "
         else:
             txt += "🟩 "
-
         txt += f"#{sc:2d} **{channels[x]['name']}** : **{pourcent}%** ({channels[x]['score']}) *{channels[x]['time']}ms*\n"
         csv += f"{channels[x]['name']}\t{channels[x]['score']}\n"
         sc += 1
@@ -142,67 +140,7 @@ async def usage(ctx, jours=7, lim=1000):
     txt += f"Temps écoulé : {round(time.time()-ttttime,1)}s"
     await ctx.send(txt)
 
-    # datef = datetime.fromtimestamp(time.time())-timedelta(days=jours)
-    # ttttime = time.time()
-    # channels = {}
 
-    # allmsg = 0
-    # for cat in ctx.guild.categories:
-    #     # if "squat" not in cat.name.lower():
-    #     #     break
-    #     for chan in cat.channels:
-    #         try:
-    #             if chan.name[0] == "_":
-    #                 continue
-    #             if(str(chan.type) == "text"):
-    #                 channels[chan.id] = {
-    #                     "name": chan,
-    #                     "score": 0,
-    #                     "time": 0.0
-    #                 }
-
-    #                 temptime = time.time()
-    #                 msglist = await chan.history(limit=lim, after=datef).flatten()
-    #                 i = len(msglist)
-
-    #                 channels[chan.id]["score"] = i
-    #                 delta = round((time.time()-temptime)*1000.0)
-    #                 channels[chan.id]["time"] = delta
-    #                 print(f"{chan} : {delta}ms")
-    #                 allmsg += i
-    #         except discord.errors.Forbidden:
-    #             print("forbiden channel")
-    #         except:
-    #             print("Unexpected error:", sys.exc_info())
-    #             for x in sys.exc_info():
-    #                 print(x)
-    #             continue
-    # print("---------------------------")
-    # sc = 1
-    # csv = ""
-    # c = {k: v for k, v in sorted(channels.items(), key=lambda item: item[1]["score"], reverse=True)}
-    # csv = ""
-    # txt = "**__UTILISATION DES CANAUX DE MEMBRES__**\n"
-    # for x in c:
-    #     pourcent = round(channels[x]['score']/allmsg*100, 2)
-    #     if pourcent < 2:
-    #         txt += "🟥 "
-    #     elif pourcent < 10:
-    #         txt += "🟨 "
-    #     else:
-    #         txt += "🟩 "
-
-    #     txt += f"#{sc:2d} **{channels[x]['name']}** : **{pourcent}%** ({channels[x]['score']})\n"
-    #     csv += f"{channels[x]['name']}\t{channels[x]['score']}\n"
-    #     sc += 1
-    # print(csv)
-    # txt += f"Temps écoulé : {round(time.time()-ttttime,1)}s"
-    # await ctx.send(txt)
-
-
-global COOLDOWN, DUREE
-DUREE = 10
-COOLDOWN = 0
 @bot.command(name='clivage', help='')
 async def clivage(ctx, *arr):
     global COOLDOWN
@@ -214,7 +152,7 @@ async def clivage(ctx, *arr):
     gifs = ["https://imgur.com/6ovFm4w", "https://imgur.com/QTL952k"]
     if len(arr) > 0:
         l = " ".join(arr)
-        num = random.randint(0, 1)
+        num = randint(0, 1)
         if arr[0].lower() in ["les", "des", "mes", "ces"]:
             await ctx.send(f"{l} sont de {bords[num]}\n{gifs[num]}")
         elif arr[0].lower() in ["je", "j", "j'"]:
@@ -241,7 +179,7 @@ async def on_ready():
 
 
 def reponses_timbot(message):
-    if "timbot" in message.content.lower():
+    if "bot" in message.content.lower():
         if "merci" in message.content.lower():
             return "Mais de rien, "+str(message.author.display_name)+"!"
         if "bon" in message.content.lower():
