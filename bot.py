@@ -4,7 +4,10 @@ import time
 import sys
 import math
 import re
-from random import shuffle, randint
+import yaml
+import difflib
+import asyncio
+from random import shuffle, randint, seed
 from datetime import datetime, timedelta
 from discord.ext import commands
 from discord.ext import tasks
@@ -12,15 +15,23 @@ from dotenv import load_dotenv
 
 # ----------------------------- SETUP VARIABLES GLOBALES ET BOT
 
-global COOLDOWN, DUREE
-DUREE = 10
-COOLDOWN = 0
-
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 PASSWORD = os.getenv('PASSWORD')
 
 bot = commands.Bot(command_prefix=';')
+
+quotes = {}
+
+with open("quotes.yml", encoding='utf-8') as f:
+    data = yaml.load(f, Loader=yaml.FullLoader)
+    if data is not None:
+        quotes = data
+    else:
+        quotes = {}
+    f.close()
+    print("quotes chargée")
+
 
 # ----------------------------- FONCTIONS UTILITAIRES
 
@@ -30,6 +41,46 @@ async def ping(ctx):
     await ctx.send("Pong!")
 
 # ----------------------------- COMMANDES
+
+
+@bot.command(name='cdza', help='Affiche une liste de quote de cdza')
+async def cdza(ctx, *arr):
+    t = []
+    num = 0.8
+    while len(t) < 2 or num == 0:
+        num -= 0.05
+        t = difflib.get_close_matches(' '.join(arr), quotes, n=10, cutoff=num)
+    txt = "**__LISTE DES QUOTES TROUVEE__**\n"
+    emoji = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"]
+
+    used = {}
+    i = 0
+    for x in t:
+        txt += f"{emoji[i]} {x} -> {quotes[x]['title']}, à {quotes[x]['time']}s\n"  # ({quotes[x]['ep']}&t={quotes[x]['time']})
+        used[emoji[i]] = i
+        i += 1
+    msg = await ctx.send(txt)
+    for x in used:
+        await msg.add_reaction(x)
+
+    def check(reaction, user):
+        return user == ctx.author and str(reaction.emoji) in used
+    try:
+        reaction, user = await bot.wait_for('reaction_add', timeout=20, check=check)
+    except asyncio.TimeoutError:
+        await msg.edit(content=f"{txt}\n (timeout)")
+        try:
+            for x in used:
+                await msg.clear_reaction(x)
+        except:
+            print("pas les bons role")
+        return
+    await msg.edit(content=f"{quotes[t[used[reaction.emoji]]]['ep']}&t={quotes[t[used[reaction.emoji]]]['time']}")
+    try:
+        for x in used:
+            await msg.clear_reaction(x)
+    except:
+        print("pas les bons role")
 
 
 @bot.command(name='saucisson', help='Pong!')
@@ -56,8 +107,7 @@ async def boule(ctx, *arr):
         "j": "t",
         "je": "tu",
         "suis": "es",
-        "ai": "a",
-
+        "ai": "a"
     }
 
     str = ' '.join(arr).lower()
@@ -141,13 +191,26 @@ async def usage(ctx, jours=7, lim=1000):
     await ctx.send(txt)
 
 
-@bot.command(name='clivage', help='')
+@bot.command(name='maitreverreux', help='donne droite ou gauche selon l\'entrée')
+async def maitreverreux(ctx, *arr):
+    bords = ["droite", "gauche"]
+    gifs = ["https://imgur.com/6ovFm4w", "https://imgur.com/QTL952k"]
+    if len(arr) > 0:
+        l = " ".join(arr)
+        seedL = 0
+        for x in l:
+            seedL += ord(x)
+        num = seedL % 2
+        if arr[0].lower() in ["les", "des", "mes", "ces"]:
+            await ctx.send(f"{l} sont de {bords[num]}\n{gifs[num]}")
+        elif arr[0].lower() in ["je", "j", "j'"]:
+            await ctx.send(f"{l} suis de {bords[num]}\n{gifs[num]}")
+        else:
+            await ctx.send(f"{l} est de {bords[num]}\n{gifs[num]}")
+
+
+@bot.command(name='clivage', help='donne droite ou gauche de maniere random')
 async def clivage(ctx, *arr):
-    global COOLDOWN
-    if time.time() <= COOLDOWN+DUREE:
-        await ctx.send(f"Veuillez attendre {round(COOLDOWN+DUREE-time.time())}s avant de recommencer :)")
-        return
-    COOLDOWN = time.time()
     bords = ["droite", "gauche"]
     gifs = ["https://imgur.com/6ovFm4w", "https://imgur.com/QTL952k"]
     if len(arr) > 0:
