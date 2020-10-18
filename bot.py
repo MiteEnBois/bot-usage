@@ -78,7 +78,7 @@ async def quotes(ctx, phrase, dict):
     try:
         reaction, user = await bot.wait_for('reaction_add', timeout=20, check=check)
     except asyncio.TimeoutError:
-        await msg.edit(content=f"{txt}\n (timeout)")
+        await msg.edit(content=f"Temps écoulé pour \"{phrase}\"")
         try:
             for x in used:
                 await msg.clear_reaction(x)
