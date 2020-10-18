@@ -21,17 +21,27 @@ PASSWORD = os.getenv('PASSWORD')
 
 bot = commands.Bot(command_prefix=';')
 
-quotes = {}
+q_cdza = {}
 
-with open("quotes.yml", encoding='utf-8') as f:
+with open("q_cdza.yml", encoding='utf-8') as f:
     data = yaml.load(f, Loader=yaml.FullLoader)
     if data is not None:
-        quotes = data
+        q_cdza = data
     else:
-        quotes = {}
+        q_cdza = {}
     f.close()
-    print("quotes chargée")
+    print("q_cdza chargée")
 
+# q_jdg = {}
+
+# with open("q_jdg.yml", encoding='utf-8') as f:
+#     data = yaml.load(f, Loader=yaml.FullLoader)
+#     if data is not None:
+#         q_jdg = data
+#     else:
+#         q_jdg = {}
+#     f.close()
+#     print("q_jdg chargée")
 
 # ----------------------------- FONCTIONS UTILITAIRES
 
@@ -43,23 +53,23 @@ async def ping(ctx):
 # ----------------------------- COMMANDES
 
 
-@bot.command(name='cdza', help='Affiche une liste de quote de cdza')
-async def cdza(ctx, *arr):
+async def quotes(ctx, phrase, dict):
+    msg = await ctx.send("Recherche en cours veuillez patienter")
     t = []
     num = 0.8
     while len(t) < 2 or num == 0:
         num -= 0.05
-        t = difflib.get_close_matches(' '.join(arr), quotes, n=10, cutoff=num)
+        t = difflib.get_close_matches(phrase, dict, n=10, cutoff=num)
     txt = "**__LISTE DES QUOTES TROUVEE__**\n"
     emoji = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"]
 
     used = {}
     i = 0
     for x in t:
-        txt += f"{emoji[i]} {x} -> {quotes[x]['title']}, à {quotes[x]['time']}s\n"  # ({quotes[x]['ep']}&t={quotes[x]['time']})
+        txt += f"{emoji[i]} {x} -> {dict[x]['title']}, à {dict[x]['time']}s\n"  # ({dict[x]['ep']}&t={dict[x]['time']})
         used[emoji[i]] = i
         i += 1
-    msg = await ctx.send(txt)
+    await msg.edit(content=f"{txt}")
     for x in used:
         await msg.add_reaction(x)
 
@@ -75,12 +85,22 @@ async def cdza(ctx, *arr):
         except:
             print("pas les bons role")
         return
-    await msg.edit(content=f"{quotes[t[used[reaction.emoji]]]['ep']}&t={quotes[t[used[reaction.emoji]]]['time']}")
+    await msg.edit(content=f"{dict[t[used[reaction.emoji]]]['ep']}&t={dict[t[used[reaction.emoji]]]['time']}")
     try:
         for x in used:
             await msg.clear_reaction(x)
     except:
         print("pas les bons role")
+
+
+@bot.command(name='cdza', help='Recherche une quote de cdza et affiche celles qui sont proche de la phrase entrée. Attention, la phrase donnée doit etre précise pour trouver votre quote')
+async def cdza(ctx, *arr):
+    await quotes(ctx, ' '.join(arr), q_cdza)
+
+
+# @bot.command(name='jdg', help='Recherche une quote de jdg et affiche celles qui sont proche de la phrase entrée. Attention, la phrase donnée doit etre précise pour trouver votre quote')
+# async def jdg(ctx, *arr):
+#     await quotes(ctx, ' '.join(arr), q_jdg)
 
 
 @bot.command(name='saucisson', help='Pong!')
