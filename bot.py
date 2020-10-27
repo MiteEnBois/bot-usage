@@ -185,7 +185,7 @@ async def clear(ctx, jours=1):
         await m.delete()
         await ctx.message.delete()
         return
-    messages = len(await ctx.channel.history(limit=100,
+    messages = len(await ctx.channel.history(limit=1000,
                                              before=datef).flatten())
     if messages == 0 or messages is None:
         m = await ctx.send("Pas de messages à supprimer")
@@ -203,7 +203,7 @@ async def clear(ctx, jours=1):
     try:
         resp = await bot.wait_for("message", check=check, timeout=30)
         print("deleting")
-        await ctx.channel.purge(limit=100, before=datef)
+        await ctx.channel.purge(limit=1000, before=datef)
         # await ctx.channel.purge(limit=100)
         try:
             await resp.delete()
