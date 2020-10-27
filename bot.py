@@ -173,6 +173,52 @@ async def bouleuh(ctx, *arr):
 
 
 @bot.command(
+    name='clear',
+    help=
+    'supprimes les messages d\'un canal. jours=a partir de quand ca delete\nPar défaut supprime les messages plus vieux qu\'un jour; 0 pour tout les messages'
+)
+async def clear(ctx, jours=1):
+    datef = datetime.fromtimestamp(time.time()) - timedelta(days=jours)
+    if ctx.channel.name[0] != "_":
+        m = await ctx.send("Commande interdite ici")
+        await asyncio.sleep(10)
+        await m.delete()
+        await ctx.message.delete()
+        return
+    messages = len(await ctx.channel.history(limit=100,
+                                             before=datef).flatten())
+    if messages == 0 or messages is None:
+        m = await ctx.send("Pas de messages à supprimer")
+        await asyncio.sleep(10)
+        await m.delete()
+        await ctx.message.delete()
+        return
+    conf = await ctx.send(
+        f"Vous êtes sur le point de supprimer {messages} messages, souhaitez vous continuer? Envoyez Oui pour confirmer"
+    )
+
+    def check(m):
+        return m.content == "Oui" and m.channel == ctx.channel and m.author == ctx.author
+
+    try:
+        resp = await bot.wait_for("message", check=check, timeout=30)
+        print("deleting")
+        await ctx.channel.purge(limit=100, before=datef)
+        # await ctx.channel.purge(limit=100)
+        try:
+            await resp.delete()
+            await ctx.message.delete()
+        except:
+            print("deleted")
+
+    except asyncio.TimeoutError:
+        await conf.edit(content="Timeout")
+        await asyncio.sleep(10)
+        await conf.delete()
+        await ctx.message.delete()
+
+
+@bot.command(
     name='usage',
     help=
     'compte les messages de chaque canal dans les x derniers jours. usage: ;usage <jours(defaut 7)> <limite message(defaut 500)>'
@@ -293,7 +339,7 @@ async def clivage(ctx, *arr):
 
 @bot.command(name='test', help='')
 async def test(ctx):
-    await ctx.send("squat" in ctx.channel.category.name.lower())
+    print(ctx)
 
 
 # ----------------------------- FIN SETUP
@@ -309,32 +355,32 @@ async def on_ready():
     print(f'{bot.user} has started')
 
 
-def reponses_timbot(message):
-    if "bot" in message.content.lower():
-        if "merci" in message.content.lower():
-            return "Mais de rien, " + str(message.author.display_name) + "!"
-        if "bon" in message.content.lower():
-            return ":3"
-        if "nul" in message.content.lower(
-        ) or "mauvais" in message.content.lower(
-        ) or "merde" in message.content.lower():
-            return ":'<"
-        if "hein" in message.content.lower() and "?" in message.content.lower(
-        ):
-            if message.author.id == 123742890902945793:
-                return "Mais oui, évidemment " + str(
-                    message.author.display_name) + "!"
-            else:
-                return "Pourquoi tu me demande? J'ai l'air d'être ton ami?"
+# def reponses_timbot(message):
+#     if "bot" in message.content.lower():
+#         if "merci" in message.content.lower():
+#             return "Mais de rien, " + str(message.author.display_name) + "!"
+#         if "bon" in message.content.lower():
+#             return ":3"
+#         if "nul" in message.content.lower(
+#         ) or "mauvais" in message.content.lower(
+#         ) or "merde" in message.content.lower():
+#             return ":'<"
+#         if "hein" in message.content.lower() and "?" in message.content.lower(
+#         ):
+#             if message.author.id == 123742890902945793:
+#                 return "Mais oui, évidemment " + str(
+#                     message.author.display_name) + "!"
+#             else:
+#                 return "Pourquoi tu me demande? J'ai l'air d'être ton ami?"
 
 
 @bot.event
 async def on_message(message):
     if message.author == bot.user:
         return
-    msg = reponses_timbot(message)
-    if msg is not None:
-        await message.channel.send(msg)
+    # msg = reponses_timbot(message)
+    # if msg is not None:
+    #     await message.channel.send(msg)
 
     await bot.process_commands(message)
 
