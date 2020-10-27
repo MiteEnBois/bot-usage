@@ -206,6 +206,7 @@ async def clear(ctx, jours=1):
         await ctx.channel.purge(limit=1000, before=datef)
         # await ctx.channel.purge(limit=100)
         try:
+            await conf.delete()
             await resp.delete()
             await ctx.message.delete()
         except:
