@@ -7,8 +7,10 @@ import re
 import yaml
 import difflib
 import asyncio
+from lxml import html
+import requests
 from random import shuffle, randint, seed
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from discord.ext import commands
 from discord.ext import tasks
 from dotenv import load_dotenv
@@ -45,6 +47,36 @@ print(f"Temps écoulé : {round(time.time()-ttttime,1)}s")
 #     f.close()
 #     print("q_jdg chargée")
 # print(f"Temps écoulé : {round(time.time()-ttttime,1)}s")
+
+page = requests.get(
+    'https://en.wikipedia.org/wiki/List_of_The_Expanse_episodes')
+tree = html.fromstring(page.content)
+
+tx = tree.xpath("//tr[@class = 'vevent']/td[@class = 'summary']/text()")
+ta = tree.xpath("//tr[@class = 'vevent']/td[@class = 'summary']/a/text()")
+titlesExpanse = []
+
+for a in ta:
+    titlesExpanse.append(f"\"{a}\"")
+for x in tx:
+    if x != '"':
+        titlesExpanse.append(x)
+
+desc = tree.xpath("//tr[@class = 'expand-child']/td[@class = 'description']")
+descriptionExpanse = []
+
+for x in desc:
+    nodes = x.xpath("./node()")
+    txt = ""
+    for n in nodes:
+        try:
+            txt += f'*{n.xpath("./text()")[0]}*'
+        except:
+            txt += f'{n}'
+    descriptionExpanse.append(txt.replace("\n", ""))
+
+print("Trucs expanse chargés")
+
 # ----------------------------- FONCTIONS UTILITAIRES
 
 
@@ -203,14 +235,10 @@ async def clear(ctx, jours=1):
     try:
         resp = await bot.wait_for("message", check=check, timeout=30)
         print("deleting")
+        await conf.delete()
+        await resp.delete()
+        await ctx.message.delete()
         await ctx.channel.purge(limit=1000, before=datef)
-        # await ctx.channel.purge(limit=100)
-        try:
-            await conf.delete()
-            await resp.delete()
-            await ctx.message.delete()
-        except:
-            print("deleted")
 
     except asyncio.TimeoutError:
         await conf.edit(content="Timeout")
@@ -341,6 +369,40 @@ async def clivage(ctx, *arr):
 @bot.command(name='test', help='')
 async def test(ctx):
     print(ctx)
+
+
+@bot.command(name='expanse', help='')
+async def expanse(ctx, n=-1):
+    eps = [10, 13, 13, 10]
+    start = date(2020, 10, 31)
+    num = (date.today() - start).days
+    if n != -1:
+        num = n
+    if num < 0:
+        await ctx.send("Patience, il faut encore attendre un peu")
+        return
+    if num >= 46:
+        await ctx.send(
+            "**LISTE DES DATES DE SORTIE : **\nS05E01 : **\"Exodus\"**; sortie : December 16, 2020\nS05E02 : **\"Churn\"**; sortie : December 16, 2020\nS05E03 : **\"Mother\"**; sortie : December 16, 2020\nS05E04 : **\"Guagamela\"**; sortie : December 23, 2020\nS05E05 : **\"Down and Out\"**; sortie : December 30, 2020\nS05E06 : **\"Tribes\"**; sortie : January 6, 2021\nS05E07 : **\"Oyedeng\"**; sortie : January 13, 2021\nS05E08 : **\"Hard Vacuum\"**; sortie : January 20, 2021\nS05E09 : **\"Winnipesaukee\"**; sortie : January 27, 2021\nS05E10 : **\"Nemesis Games\"**; sortie : February 3, 2021\n"
+        )
+        return
+
+    s = 1
+    ep = num
+    for i in range(len(eps)):
+        if num + 1 > eps[i]:
+            s = i + 2
+            num -= eps[i]
+        else:
+            break
+    if s < 5:
+        await ctx.send(
+            f"Episode d'aujourd'hui : **S{s:02}E{num+1:02} : {titlesExpanse[ep]}** \n||{descriptionExpanse[ep]}||"
+        )
+    else:
+        await ctx.send(
+            f"Episode d'aujourd'hui : **S{s:02}E{num+1:02} : {titlesExpanse[ep]}**"
+        )
 
 
 # ----------------------------- FIN SETUP
