@@ -3,3 +3,5 @@ bot_debug.py
 q_jdg.yml
 .vscode/settings.json
 data_test.json
+venv
+.venv
