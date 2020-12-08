@@ -16,6 +16,7 @@ from discord.ext import tasks
 from dotenv import load_dotenv
 
 # ----------------------------- SETUP VARIABLES GLOBALES ET BOT
+print("start loading")
 
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
@@ -256,7 +257,10 @@ async def usage(ctx, jours=7, lim=1000, all_chan=False):
     datef = datetime.fromtimestamp(time.time()) - timedelta(days=jours)
     ttttime = time.time()
     channels = {}
-    categories = [756867463916027976, 757612262054821949, 360597432758829056]
+    categories = [
+        756867463916027976, 757612262054821949, 360597432758829056,
+        777349957765693460
+    ]
     full = "█"
     empty = "░"
 
