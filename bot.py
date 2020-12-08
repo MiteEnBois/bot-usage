@@ -252,31 +252,48 @@ async def clear(ctx, jours=1):
     help=
     'compte les messages de chaque canal dans les x derniers jours. usage: ;usage <jours(defaut 7)> <limite message(defaut 500)>'
 )
-async def usage(ctx, jours=7, lim=1000):
+async def usage(ctx, jours=7, lim=1000, all_chan=False):
     datef = datetime.fromtimestamp(time.time()) - timedelta(days=jours)
     ttttime = time.time()
     channels = {}
-    categories = ["🔥 SQUAT", "meem", "🔊-Global-💬"]
+    categories = [756867463916027976, 757612262054821949, 360597432758829056]
     full = "█"
     empty = "░"
-    msg = await ctx.send(f"Comptage en cours veuillez patienter\n{empty*20} 0%"
-                         )
+
     chan_count = 0
-    for x in ctx.guild.categories:
-        if x.name in categories:
-            chan_count += len(x.channels)
+    if all_chan:
+        for x in ctx.guild.channels:
+            if (str(x.type) == "text"):
+                try:
+                    await x.history(limit=1).flatten()
+                except discord.errors.Forbidden:
+                    print("forbiden channel")
+                    continue
+                chan_count += 1
+    else:
+        for x in ctx.guild.categories:
+            if x.id in categories:
+                chan_count += len(x.channels)
+    msg = await ctx.send(
+        f"Comptage en cours veuillez patienter\n{0:2d}/{chan_count:2d} {empty*20} 0%"
+    )
     print(f"chan count : {chan_count}")
     chan_processed = 0
     percent = 0
     allmsg = 0
     for chan in ctx.guild.channels:
-        if chan.category is None or chan.category.name not in categories:
+        if not all_chan and (chan.category is None
+                             or chan.category.id not in categories):
             continue
         try:
-            if chan.name[0] == "_":
+            if chan.name[0] == "_" or (str(chan.type) != "text"):
                 continue
             if (str(chan.type) == "text"):
-                channels[chan.id] = {"name": chan, "score": 0, "time": 0.0}
+                channels[int(chan.id)] = {
+                    "name": chan.name,
+                    "score": 0,
+                    "time": 0.0
+                }
                 i = 0
                 temptime = time.time()
                 # msglist = await chan.history(limit=lim, after=datef).flatten()
@@ -290,10 +307,11 @@ async def usage(ctx, jours=7, lim=1000):
                 channels[chan.id]["score"] = i
                 delta = round((time.time() - temptime) * 1000.0)
                 channels[chan.id]["time"] = delta
-                print(f"{chan} : {delta}ms")
+                print(f"{chan};{i};{delta}")
                 allmsg += i
         except discord.errors.Forbidden:
             print("forbiden channel")
+            channels.pop(int(chan.id))
         except:
             print("Unexpected error:", sys.exc_info())
             for x in sys.exc_info():
@@ -304,51 +322,46 @@ async def usage(ctx, jours=7, lim=1000):
             percent = math.floor(chan_processed / chan_count * 20)
             await msg.edit(
                 content=
-                f"Comptage en cours veuillez patienter\n{full*percent}{empty*(20-percent)} {math.floor(chan_processed / chan_count * 100)}%"
+                f"Comptage en cours veuillez patienter\n{chan_processed:2d}/{chan_count:2d} {full*percent}{empty*(20-percent)} {math.floor(chan_processed / chan_count * 100)}%"
             )
     print("---------------------------")
     sc = 1
-    csv = ""
     c = {
         k: v
         for k, v in sorted(
             channels.items(), key=lambda item: item[1]["score"], reverse=True)
     }
-    csv = ""
-    txt = "**__UTILISATION DES CANAUX DE MEMBRES__**\n"
+    # with open('data_test.json', 'w') as outfile:
+    #     json.dump(channels, outfile)
+
+    new_message = False
+    txt = "**__UTILISATION DES CANAUX DU SERVEUR__**\n"
     for x in c:
         pourcent = round(channels[x]['score'] / allmsg * 100, 2)
-        if pourcent < 2:
-            txt += "🟥 "
+        if pourcent < 0.5:
+            txt += "🟥 "  #
+        elif pourcent < 2:
+            txt += "🟧 "
         elif pourcent < 10:
             txt += "🟨 "
         else:
             txt += "🟩 "
-        txt += f"#{sc:2d} **{channels[x]['name']}** : **{pourcent}%** ({channels[x]['score']}) *{channels[x]['time']}ms*\n"
-        csv += f"{channels[x]['name']}\t{channels[x]['score']}\n"
+        t = f"#{sc:2d} **{channels[x]['name']}** : **{pourcent}%** ({channels[x]['score']}) *{channels[x]['time']}ms*\n"
+        if (len(txt) + len(t)) >= 2000:
+            if new_message:
+                await ctx.send(txt)
+            else:
+                await msg.edit(content=txt)
+                new_message = True
+            txt = ""
+        txt += t
         sc += 1
-    # print(csv)
+    txt += f"Nombre total de messages : {allmsg}\n"
     txt += f"Temps écoulé : {round(time.time()-ttttime,1)}s"
-    await msg.edit(content=txt)
-
-
-@bot.command(name='maitreverreux',
-             help='donne droite ou gauche selon l\'entrée')
-async def maitreverreux(ctx, *arr):
-    bords = ["droite", "gauche"]
-    gifs = ["https://imgur.com/6ovFm4w", "https://imgur.com/QTL952k"]
-    if len(arr) > 0:
-        l = " ".join(arr)
-        seedL = 0
-        for x in l:
-            seedL += ord(x)
-        num = seedL % 2
-        if arr[0].lower() in ["les", "des", "mes", "ces"]:
-            await ctx.send(f"{l} sont de {bords[num]}\n{gifs[num]}")
-        elif arr[0].lower() in ["je", "j", "j'"]:
-            await ctx.send(f"{l} suis de {bords[num]}\n{gifs[num]}")
-        else:
-            await ctx.send(f"{l} est de {bords[num]}\n{gifs[num]}")
+    if new_message:
+        await ctx.send(txt)
+    else:
+        await msg.edit(content=txt)
 
 
 @bot.command(name='clivage', help='donne droite ou gauche de maniere random')
@@ -372,7 +385,7 @@ async def test(ctx):
 
 
 @bot.command(name='expanse', help='')
-async def expanse(ctx, n=-1):
+async def expanse(ctx, desc=False, n=-1):
     eps = [10, 13, 13, 10]
     start = date(2020, 10, 31)
     num = (date.today() - start).days
@@ -395,7 +408,7 @@ async def expanse(ctx, n=-1):
             num -= eps[i]
         else:
             break
-    if s < 5:
+    if s < 5 and desc:
         await ctx.send(
             f"Episode d'aujourd'hui : **S{s:02}E{num+1:02} : {titlesExpanse[ep]}** \n||{descriptionExpanse[ep]}||"
         )
