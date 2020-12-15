@@ -14,6 +14,7 @@ from datetime import datetime, timedelta, date
 from discord.ext import commands
 from discord.ext import tasks
 from dotenv import load_dotenv
+#python -m pip -r install requirements.txt
 
 # ----------------------------- SETUP VARIABLES GLOBALES ET BOT
 print("start loading")
@@ -370,15 +371,13 @@ async def usage(ctx, jours=7, lim=1000, all_chan=False):
 
 @bot.command(name='clivage', help='donne droite ou gauche de maniere random')
 async def clivage(ctx, *arr):
-    bords = ["droite", "gauche"]
+    bords = ["drouate", "gôche"]
     gifs = ["https://imgur.com/6ovFm4w", "https://imgur.com/QTL952k"]
     if len(arr) > 0:
         l = " ".join(arr)
         num = randint(0, 1)
         if arr[0].lower() in ["les", "des", "mes", "ces"]:
             await ctx.send(f"{l} sont de {bords[num]}\n{gifs[num]}")
-        elif arr[0].lower() in ["je", "j", "j'"]:
-            await ctx.send(f"{l} suis de {bords[num]}\n{gifs[num]}")
         else:
             await ctx.send(f"{l} est de {bords[num]}\n{gifs[num]}")
 
