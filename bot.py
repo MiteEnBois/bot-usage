@@ -1,4 +1,4 @@
-import os
+import os, io
 import discord
 import time
 import sys
@@ -14,6 +14,7 @@ from datetime import datetime, timedelta, date
 from discord.ext import commands
 from discord.ext import tasks
 from dotenv import load_dotenv
+import matplotlib.pyplot as plt
 #python -m pip -r install requirements.txt
 
 # ----------------------------- SETUP VARIABLES GLOBALES ET BOT
@@ -268,7 +269,7 @@ async def usage(ctx, jours=7, lim=1000, all_chan=False):
     chan_count = 0
     if all_chan:
         for x in ctx.guild.channels:
-            if (str(x.type) == "text"):
+            if (str(x.type) == "text" and x.name[0] != "_"):
                 try:
                     await x.history(limit=1).flatten()
                 except discord.errors.Forbidden:
@@ -340,7 +341,7 @@ async def usage(ctx, jours=7, lim=1000, all_chan=False):
     #     json.dump(channels, outfile)
 
     new_message = False
-    txt = "**__UTILISATION DES CANAUX DU SERVEUR__**\n"
+    txt = f'**__UTILISATION DES CANAUX DU SERVEUR "{ctx.guild.name.upper()}" DANS LES {jours} DERNIERS JOURS__**\n'
     for x in c:
         pourcent = round(channels[x]['score'] / allmsg * 100, 2)
         if pourcent < 0.5:
@@ -362,11 +363,47 @@ async def usage(ctx, jours=7, lim=1000, all_chan=False):
         txt += t
         sc += 1
     txt += f"Nombre total de messages : {allmsg}\n"
+
+    for key, value in channels.items():
+        if value['name'][1] == "-":
+            value['name'] = value['name'][2:]
+    data = channels
+    stats = sorted([(value['score'], f"{value['name']}")
+                    for key, value in data.items()])
+
+    labels = [value for key, value in stats]
+    values = [key for key, value in stats]
+    fig, ax = plt.subplots()
+    plt.barh(labels, values, color="#ffdc54")
+
+    right_side = ax.spines["right"]
+    right_side.set_visible(False)
+    top_side = ax.spines["top"]
+    top_side.set_visible(False)
+
+    plt.ylabel('Canaux')
+    plt.xlabel('Nombre de message')
+    plt.title(
+        f'Utilisation des canaux du serveur "{ctx.guild.name}" dans les {jours} derniers jours'
+    )
+    # plt.box(on=None)
+
+    for index, value in enumerate(values):
+        plt.text(x=value + 10,
+                 y=index - 0.25,
+                 s=f"{value}, {round(value/sum(values)*100, 2)}%")
+
+    fig = io.BytesIO()
+
+    plt.savefig(fig, bbox_inches='tight', format="png")
+    fig.seek(0)
+
     txt += f"Temps écoulé : {round(time.time()-ttttime,1)}s"
     if new_message:
         await ctx.send(txt)
     else:
         await msg.edit(content=txt)
+    await ctx.send(file=discord.File(fig, 'usage.png'))
 
 
 @bot.command(name='clivage', help='donne droite ou gauche de maniere random')
