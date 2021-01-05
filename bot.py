@@ -465,6 +465,8 @@ async def expanse(ctx, desc=False, n=-1):
 
 @bot.event
 async def on_ready():
+    await bot.change_presence(
+        activity=discord.Game(f"{bot.command_prefix}help"))
     print(f'{bot.user} is connected to the following guild:')
     for guild in bot.guilds:
         print(f'-{guild.name}')
