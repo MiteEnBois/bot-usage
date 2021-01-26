@@ -259,27 +259,23 @@ async def usage(ctx, jours=7, lim=1000, all_chan=False):
     datef = datetime.fromtimestamp(time.time()) - timedelta(days=jours)
     ttttime = time.time()
     channels = {}
-    categories = [
-        756867463916027976, 757612262054821949, 360597432758829056,
-        777349957765693460, 802540420651417650, 802541665847738368,
-        802540828567404606, 756867463916027976
-    ]
+    categories = {
+        444472133842894848: [
+            777349957765693460, 802540420651417650, 802541665847738368,
+            802540828567404606, 756867463916027976
+        ],  #controliste
+        147699691377655808: [360597432758829056],  #kaamelott
+        370295251983663114: [757612262054821949]  #test
+    }
     full = "█"
     empty = "░"
 
     chan_count = 0
     if all_chan:
-        for x in ctx.guild.channels:
-            if (str(x.type) == "text" and x.name[0] != "_"):
-                try:
-                    await x.history(limit=1).flatten()
-                except discord.errors.Forbidden:
-                    print("forbiden channel")
-                    continue
-                chan_count += 1
+        chan_count = len(ctx.guild.channels)
     else:
         for x in ctx.guild.categories:
-            if x.id in categories:
+            if x.id in categories[ctx.guild.id]:
                 chan_count += len(x.channels)
     msg = await ctx.send(
         f"Comptage en cours veuillez patienter\n{0:2d}/{chan_count:2d} {empty*20} 0%"
@@ -289,11 +285,11 @@ async def usage(ctx, jours=7, lim=1000, all_chan=False):
     percent = 0
     allmsg = 0
     for chan in ctx.guild.channels:
-        if not all_chan and (chan.category is None
-                             or chan.category.id not in categories):
+        if not all_chan and (chan.category is None or
+                             chan.category.id not in categories[ctx.guild.id]):
             continue
         try:
-            if chan.name[0] == "_" or (str(chan.type) != "text"):
+            if (str(chan.type) != "text"):  #chan.name[0] == "_" or
                 continue
             if (str(chan.type) == "text"):
                 channels[int(chan.id)] = {
@@ -368,6 +364,8 @@ async def usage(ctx, jours=7, lim=1000, all_chan=False):
     for key, value in channels.items():
         if value['name'][1] == "-":
             value['name'] = value['name'][2:]
+        if value['name'][2] == "-":
+            value['name'] = value['name'][3:]
     data = channels
     stats = sorted([(value['score'], f"{value['name']}")
                     for key, value in data.items()])
