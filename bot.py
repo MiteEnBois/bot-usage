@@ -16,12 +16,8 @@ from discord.ext import commands
 from discord.ext import tasks
 from dotenv import load_dotenv
 import matplotlib.pyplot as plt
-from operator import itemgetter
-from verbecc import Conjugator
 from w3lib.url import url_query_cleaner
 from url_normalize import url_normalize
-import urllib
-from urllib.request import Request, urlopen
 
 # python -m pip -r install requirements.txt
 
