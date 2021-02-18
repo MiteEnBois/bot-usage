@@ -1,4 +1,5 @@
-import os, io
+import os
+import io
 import discord
 import time
 import sys
@@ -15,14 +16,20 @@ from discord.ext import commands
 from discord.ext import tasks
 from dotenv import load_dotenv
 import matplotlib.pyplot as plt
-#python -m pip -r install requirements.txt
+from operator import itemgetter
+from verbecc import Conjugator
+from w3lib.url import url_query_cleaner
+from url_normalize import url_normalize
+import urllib
+from urllib.request import Request, urlopen
+
+# python -m pip -r install requirements.txt
 
 # ----------------------------- SETUP VARIABLES GLOBALES ET BOT
 print("start loading")
 
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
-PASSWORD = os.getenv('PASSWORD')
 
 bot = commands.Bot(command_prefix=';')
 
@@ -51,35 +58,6 @@ print(f"Temps écoulé : {round(time.time()-ttttime,1)}s")
 #     print("q_jdg chargée")
 # print(f"Temps écoulé : {round(time.time()-ttttime,1)}s")
 
-page = requests.get(
-    'https://en.wikipedia.org/wiki/List_of_The_Expanse_episodes')
-tree = html.fromstring(page.content)
-
-tx = tree.xpath("//tr[@class = 'vevent']/td[@class = 'summary']/text()")
-ta = tree.xpath("//tr[@class = 'vevent']/td[@class = 'summary']/a/text()")
-titlesExpanse = []
-
-for a in ta:
-    titlesExpanse.append(f"\"{a}\"")
-for x in tx:
-    if x != '"':
-        titlesExpanse.append(x)
-
-desc = tree.xpath("//tr[@class = 'expand-child']/td[@class = 'description']")
-descriptionExpanse = []
-
-for x in desc:
-    nodes = x.xpath("./node()")
-    txt = ""
-    for n in nodes:
-        try:
-            txt += f'*{n.xpath("./text()")[0]}*'
-        except:
-            txt += f'{n}'
-    descriptionExpanse.append(txt.replace("\n", ""))
-
-print("Trucs expanse chargés")
-
 # ----------------------------- FONCTIONS UTILITAIRES
 
 
@@ -87,6 +65,33 @@ print("Trucs expanse chargés")
 async def ping(ctx):
     await ctx.send("Pong!")
 
+
+def clean_url(url):
+    u = url_normalize(url)
+    u = url_query_cleaner(u, parameterlist=['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content'], remove=True)
+    headers = {'User-Agent': 'Mozilla/5.0'}
+    response = requests.get(u, headers=headers)
+    if response.history:
+        u = response.url
+    if "https://www.google.com/url?q=" in u:
+        u = clean_url(u.replace("https://www.google.com/url?q=", ""))
+    return u
+
+
+def clean_message(content):
+    url_finder = re.compile(r"(https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9]+\.[^\s]{2,}|www\.[a-zA-Z0-9]+\.[^\s]{2,})")
+    finded = url_finder.findall(content)
+    if finded == []:
+        raise Exception("empty")
+    txt = "Lien(s) propre : "
+    verification = "Lien(s) propre : "
+    for t in finded:
+        txt += "<"+clean_url(t) + ">\n"
+        verification += "<"+t + ">\n"
+    if verification == txt:
+        raise Exception("clean")
+    else:
+        return txt
 
 # ----------------------------- COMMANDES
 
@@ -129,8 +134,7 @@ async def quotes(ctx, phrase, dict):
             print("pas les bons role")
         return
     await msg.edit(
-        content=
-        f"{dict[t[used[reaction.emoji]]]['ep']}&t={dict[t[used[reaction.emoji]]]['time']}"
+        content=f"{dict[t[used[reaction.emoji]]]['ep']}&t={dict[t[used[reaction.emoji]]]['time']}"
     )
     try:
         for x in used:
@@ -141,8 +145,7 @@ async def quotes(ctx, phrase, dict):
 
 @bot.command(
     name='cdza',
-    help=
-    'Recherche une quote de cdza et affiche celles qui sont proche de la phrase entrée. Attention, la phrase donnée doit etre précise pour trouver votre quote'
+    help='Recherche une quote de cdza et affiche celles qui sont proche de la phrase entrée. Attention, la phrase donnée doit etre précise pour trouver votre quote'
 )
 async def cdza(ctx, *arr):
     await quotes(ctx, ' '.join(arr).lower(), q_cdza)
@@ -202,15 +205,9 @@ async def boule(ctx, *arr):
     await ctx.send(f"{str.capitalize()} : 🎱**{boule[randint(0, 19)]}**🎱")
 
 
-@bot.command(name='bouleuh', help='Pong!')
-async def bouleuh(ctx, *arr):
-    await ctx.send("Nique bouleuh tout mes potes détestent bouleuh")
-
-
 @bot.command(
     name='clear',
-    help=
-    'supprimes les messages d\'un canal. jours=a partir de quand ca delete\nPar défaut supprime les messages plus vieux qu\'un jour; 0 pour tout les messages'
+    help='supprimes les messages d\'un canal. jours=a partir de quand ca delete\nPar défaut supprime les messages plus vieux qu\'un jour; 0 pour tout les messages'
 )
 async def clear(ctx, jours=1):
     datef = datetime.fromtimestamp(time.time()) - timedelta(days=jours)
@@ -252,8 +249,7 @@ async def clear(ctx, jours=1):
 
 @bot.command(
     name='usage',
-    help=
-    'compte les messages de chaque canal dans les x derniers jours. usage: ;usage <jours(defaut 7)> <limite message(defaut 500)>'
+    help='compte les messages de chaque canal dans les x derniers jours. usage: ;usage <jours(defaut 7)> <limite message(defaut 500)>'
 )
 async def usage(ctx, jours=7, lim=1000, all_chan=False):
     datef = datetime.fromtimestamp(time.time()) - timedelta(days=jours)
@@ -263,9 +259,9 @@ async def usage(ctx, jours=7, lim=1000, all_chan=False):
         444472133842894848: [
             777349957765693460, 802540420651417650, 802541665847738368,
             802540828567404606, 756867463916027976
-        ],  #controliste
-        147699691377655808: [360597432758829056],  #kaamelott
-        370295251983663114: [757612262054821949]  #test
+        ],  # controliste
+        147699691377655808: [360597432758829056],  # kaamelott
+        370295251983663114: [757612262054821949]  # test
     }
     full = "█"
     empty = "░"
@@ -289,7 +285,7 @@ async def usage(ctx, jours=7, lim=1000, all_chan=False):
                              chan.category.id not in categories[ctx.guild.id]):
             continue
         try:
-            if (str(chan.type) != "text"):  #chan.name[0] == "_" or
+            if (str(chan.type) != "text"):  # chan.name[0] == "_" or
                 continue
             if (str(chan.type) == "text"):
                 channels[int(chan.id)] = {
@@ -324,8 +320,7 @@ async def usage(ctx, jours=7, lim=1000, all_chan=False):
         if math.floor(chan_processed / chan_count * 20) > percent:
             percent = math.floor(chan_processed / chan_count * 20)
             await msg.edit(
-                content=
-                f"Comptage en cours veuillez patienter\n{chan_processed:2d}/{chan_count:2d} {full*percent}{empty*(20-percent)} {math.floor(chan_processed / chan_count * 100)}%"
+                content=f"Comptage en cours veuillez patienter\n{chan_processed:2d}/{chan_count:2d} {full*percent}{empty*(20-percent)} {math.floor(chan_processed / chan_count * 100)}%"
             )
     print("---------------------------")
     sc = 1
@@ -423,40 +418,6 @@ async def test(ctx):
     print(ctx)
 
 
-@bot.command(name='expanse', help='')
-async def expanse(ctx, desc=False, n=-1):
-    eps = [10, 13, 13, 10]
-    start = date(2020, 10, 31)
-    num = (date.today() - start).days
-    if n != -1:
-        num = n
-    if num < 0:
-        await ctx.send("Patience, il faut encore attendre un peu")
-        return
-    if num >= 46:
-        await ctx.send(
-            "**LISTE DES DATES DE SORTIE : **\nS05E01 : **\"Exodus\"**; sortie : December 16, 2020\nS05E02 : **\"Churn\"**; sortie : December 16, 2020\nS05E03 : **\"Mother\"**; sortie : December 16, 2020\nS05E04 : **\"Guagamela\"**; sortie : December 23, 2020\nS05E05 : **\"Down and Out\"**; sortie : December 30, 2020\nS05E06 : **\"Tribes\"**; sortie : January 6, 2021\nS05E07 : **\"Oyedeng\"**; sortie : January 13, 2021\nS05E08 : **\"Hard Vacuum\"**; sortie : January 20, 2021\nS05E09 : **\"Winnipesaukee\"**; sortie : January 27, 2021\nS05E10 : **\"Nemesis Games\"**; sortie : February 3, 2021\n"
-        )
-        return
-
-    s = 1
-    ep = num
-    for i in range(len(eps)):
-        if num + 1 > eps[i]:
-            s = i + 2
-            num -= eps[i]
-        else:
-            break
-    if s < 5 and desc:
-        await ctx.send(
-            f"Episode d'aujourd'hui : **S{s:02}E{num+1:02} : {titlesExpanse[ep]}** \n||{descriptionExpanse[ep]}||"
-        )
-    else:
-        await ctx.send(
-            f"Episode d'aujourd'hui : **S{s:02}E{num+1:02} : {titlesExpanse[ep]}**"
-        )
-
-
 # ----------------------------- FIN SETUP
 
 # S'execute quand le bot est prêt; Affiche la liste des serveurs sur lesquelles le bot est actuellement
@@ -495,12 +456,23 @@ async def on_ready():
 async def on_message(message):
     if message.author == bot.user:
         return
+    try:
+        clean = clean_message(message.content)
+    except Exception as ex:
+        reason = ex.args[0]
+        if reason == "empty":
+            nothing = 0
+        if reason == "clean":
+            await message.add_reaction("👍")
+
+        await bot.process_commands(message)
+        return
+    await message.channel.send(clean)
+    await message.add_reaction("👎")
+    await bot.process_commands(message)
     # msg = reponses_timbot(message)
     # if msg is not None:
     #     await message.channel.send(msg)
-
-    await bot.process_commands(message)
-
 
 # lance le bot
 bot.run(TOKEN)
