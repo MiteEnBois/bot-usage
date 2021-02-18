@@ -83,8 +83,12 @@ def clean_message(content):
     finded = url_finder.findall(content)
     if finded == []:
         raise Exception("empty")
-    txt = "Lien(s) propre : "
-    verification = "Lien(s) propre : "
+    if len(finded) >= 2:
+        txt = "Liens propres : "
+        verification = "Liens propres : "
+    else:
+        txt = "Lien propre : "
+        verification = "Lien propre : "
     for t in finded:
         txt += "<"+clean_url(t) + ">\n"
         verification += "<"+t + ">\n"
