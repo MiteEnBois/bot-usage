@@ -63,6 +63,8 @@ async def ping(ctx):
 
 
 def clean_url(url):
+    if "youtube.com" in url or "youtu.be" in url:
+        return url
     u = url_normalize(url)
     u = url_query_cleaner(u, parameterlist=['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content'], remove=True)
     headers = {'User-Agent': 'Mozilla/5.0'}
