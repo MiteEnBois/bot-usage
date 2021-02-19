@@ -63,6 +63,8 @@ async def ping(ctx):
 
 
 def clean_url(url):
+    if url[-1:] == ">":
+        url = url[:-1]
     if "youtube.com" in url or "youtu.be" in url:
         return url
     u = url_normalize(url)
