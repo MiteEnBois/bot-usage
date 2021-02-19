@@ -63,8 +63,6 @@ async def ping(ctx):
 
 
 def clean_url(url):
-    if url[-1:] == ">":
-        url = url[:-1]
     if "youtube.com" in url or "youtu.be" in url:
         return url
     u = url_normalize(url)
@@ -90,6 +88,8 @@ def clean_message(content):
         txt = "Lien propre : "
         verification = "Lien propre : "
     for t in finded:
+        if t[-1:] == ">":
+            t = t[:-1]
         txt += "<"+clean_url(t) + ">\n"
         verification += "<"+t + ">\n"
     if verification == txt:
