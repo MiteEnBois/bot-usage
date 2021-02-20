@@ -73,6 +73,9 @@ def clean_url(url):
         u = response.url
     if "https://www.google.com/url?q=" in u:
         u = clean_url(u.replace("https://www.google.com/url?q=", ""))
+    ancre = re.search(r"\#\w*$", url)
+    if ancre is not None:
+        u = u+ancre.group(0)
     return u
 
 
@@ -463,11 +466,11 @@ async def on_message(message):
     try:
         clean = clean_message(message.content)
     except Exception as ex:
-        reason = ex.args[0]
-        if reason == "empty":
-            nothing = 0
-        if reason == "clean":
-            await message.add_reaction("👍")
+        # reason = ex.args[0]
+        # if reason == "empty":
+        #     nothing = 0
+        # if reason == "clean":
+        # await message.add_reaction("👍")
 
         await bot.process_commands(message)
         return
