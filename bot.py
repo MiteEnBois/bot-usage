@@ -8,12 +8,10 @@ import re
 import yaml
 import difflib
 import asyncio
-from lxml import html
 import requests
-from random import shuffle, randint, seed
-from datetime import datetime, timedelta, date
+from random import randint
+from datetime import datetime, timedelta
 from discord.ext import commands
-from discord.ext import tasks
 from dotenv import load_dotenv
 import matplotlib.pyplot as plt
 from w3lib.url import url_query_cleaner
@@ -59,23 +57,27 @@ print(f"Temps écoulé : {round(time.time()-ttttime,1)}s")
 
 @bot.command(name='ping', help='Pong!')
 async def ping(ctx):
-    await ctx.send("Pong!")
+    await ctx.send("Pong!!")
 
 
 def clean_url(url):
     if "youtube.com" in url or "youtu.be" in url:
         return url
-    u = url_normalize(url)
+    # u = url_normalize(url)
+    u = url
     u = url_query_cleaner(u, parameterlist=['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content'], remove=True)
-    headers = {'User-Agent': 'Mozilla/5.0'}
-    response = requests.get(u, headers=headers)
-    if response.history:
-        u = response.url
+
+    if len(u) == len(url):
+        u = url
+    # headers = {'User-Agent': 'Mozilla/5.0'}
+    # response = requests.get(u, headers=headers)
+    # if response.history:
+    #     u = response.url
     if "https://www.google.com/url?q=" in u:
         u = clean_url(u.replace("https://www.google.com/url?q=", ""))
     ancre = re.search(r"\#\w*$", url)
-    if ancre is not None:
-        u = u+ancre.group(0)
+    if ancre is not None and ancre.group(0) not in u:
+        u = u + ancre.group(0)
     return u
 
 
@@ -93,8 +95,8 @@ def clean_message(content):
     for t in finded:
         if t[-1:] == ">":
             t = t[:-1]
-        txt += "<"+clean_url(t) + ">\n"
-        verification += "<"+t + ">\n"
+        txt += "<" + clean_url(t) + ">\n"
+        verification += "<" + t + ">\n"
     if verification == txt:
         raise Exception("clean")
     else:
@@ -364,6 +366,8 @@ async def usage(ctx, jours=7, lim=1000, all_chan=False):
     txt += f"Nombre total de messages : {allmsg}\n"
 
     for key, value in channels.items():
+        if len(value['name']) == 1:
+            continue
         if value['name'][1] == "-":
             value['name'] = value['name'][2:]
         if value['name'][2] == "-":
