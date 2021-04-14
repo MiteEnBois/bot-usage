@@ -5,7 +5,7 @@ import time
 import sys
 import math
 import re
-import yaml
+import json
 import difflib
 import asyncio
 import requests
@@ -26,19 +26,17 @@ load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 
 bot = commands.Bot(command_prefix=';')
-
-ttttime = time.time()
 q_cdza = {}
 
-with open("q_cdza.yml", encoding='utf-8') as f:
-    data = yaml.load(f, Loader=yaml.FullLoader)
-    if data is not None:
-        q_cdza = data
-    else:
-        q_cdza = {}
-    f.close()
-    print("q_cdza chargée")
-print(f"Temps écoulé : {round(time.time()-ttttime,1)}s")
+# with open("q_cdza.yml", encoding='utf-8') as f:
+#     data = yaml.load(f, Loader=yaml.FullLoader)
+#     if data is not None:
+#         q_cdza = data
+#     else:
+#         q_cdza = {}
+#     f.close()
+#     print("q_cdza chargée")
+# print(f"Temps écoulé : {round(time.time()-ttttime,1)}s")
 # ttttime = time.time()
 # q_jdg = {}
 
@@ -51,6 +49,24 @@ print(f"Temps écoulé : {round(time.time()-ttttime,1)}s")
 #     f.close()
 #     print("q_jdg chargée")
 # print(f"Temps écoulé : {round(time.time()-ttttime,1)}s")
+
+with open("q_cdza.json", encoding='utf-8') as f:
+    data = json.load(f)
+    if data is not None:
+        q_cdza = data
+    else:
+        q_cdza = {}
+    f.close()
+    print("q_cdza chargée")
+
+with open("q_jdg.json", encoding='utf-8') as f:
+    data = json.load(f)
+    if data is not None:
+        q_jdg = data
+    else:
+        q_jdg = {}
+    f.close()
+    print("q_jdg chargée")
 
 # ----------------------------- FONCTIONS UTILITAIRES
 
@@ -160,13 +176,12 @@ async def cdza(ctx, *arr):
     await quotes(ctx, ' '.join(arr).lower(), q_cdza)
 
 
-# @bot.command(
-#     name='jdg',
-#     help=
-#     'Recherche une quote de jdg et affiche celles qui sont proche de la phrase entrée. Attention, la phrase donnée doit etre précise pour trouver votre quote'
-# )
-# async def jdg(ctx, *arr):
-#     await quotes(ctx, ' '.join(arr).lower(), q_jdg)
+@bot.command(
+    name='jdg',
+    help='Recherche une quote de jdg et affiche celles qui sont proche de la phrase entrée. Attention, la phrase donnée doit etre précise pour trouver votre quote'
+)
+async def jdg(ctx, *arr):
+    await quotes(ctx, ' '.join(arr).lower(), q_jdg)
 
 
 @bot.command(name='saucisson', help='Pong!')
@@ -332,6 +347,7 @@ async def usage(ctx, jours=7, lim=1000, all_chan=False):
                 content=f"Comptage en cours veuillez patienter\n{chan_processed:2d}/{chan_count:2d} {full*percent}{empty*(20-percent)} {math.floor(chan_processed / chan_count * 100)}%"
             )
     print("---------------------------")
+    await msg.edit(content=f"{msg.content}\nGénération du graphique en court, veuillez patienter ...")
     sc = 1
     c = {
         k: v
