@@ -241,8 +241,7 @@ async def clear(ctx, jours=1):
         await m.delete()
         await ctx.message.delete()
         return
-    messages = len(await ctx.channel.history(limit=1000,
-                                             before=datef).flatten())
+    messages = len(await ctx.channel.history(limit=10000, before=datef).flatten())
     if messages == 0 or messages is None:
         m = await ctx.send("Pas de messages à supprimer")
         await asyncio.sleep(10)
@@ -258,11 +257,11 @@ async def clear(ctx, jours=1):
 
     try:
         resp = await bot.wait_for("message", check=check, timeout=30)
-        print("deleting")
+        print(f"deleting {messages} messages")
         await conf.delete()
         await resp.delete()
         await ctx.message.delete()
-        await ctx.channel.purge(limit=1000, before=datef)
+        await ctx.channel.purge(limit=10000, before=datef)
 
     except asyncio.TimeoutError:
         await conf.edit(content="Timeout")
@@ -275,39 +274,28 @@ async def clear(ctx, jours=1):
     name='usage',
     help='compte les messages de chaque canal dans les x derniers jours. usage: ;usage <jours(defaut 7)> <limite message(defaut 500)>'
 )
-async def usage(ctx, jours=7, lim=1000, all_chan=False):
+async def usage(ctx, jours=7, lim=5000):
     datef = datetime.fromtimestamp(time.time()) - timedelta(days=jours)
     ttttime = time.time()
     channels = {}
-    categories = {
-        444472133842894848: [
-            777349957765693460, 802540420651417650, 802541665847738368,
-            802540828567404606, 756867463916027976
-        ],  # controliste
-        147699691377655808: [360597432758829056],  # kaamelott
-        370295251983663114: [757612262054821949]  # test
-    }
     full = "█"
     empty = "░"
 
-    chan_count = 0
-    if all_chan:
-        chan_count = len(ctx.guild.channels)
-    else:
-        for x in ctx.guild.categories:
-            if x.id in categories[ctx.guild.id]:
-                chan_count += len(x.channels)
-    msg = await ctx.send(
-        f"Comptage en cours veuillez patienter\n{0:2d}/{chan_count:2d} {empty*20} 0%"
-    )
+    list_channels = []
+    for c in ctx.guild.channels:
+
+        if c.type == discord.ChannelType.text:
+            if c.members != []:
+                list_channels.append(c)
+
+    chan_count = len(list_channels)
+
+    msg = await ctx.send(f"Comptage en cours veuillez patienter\n{0:2d}/{chan_count:2d} {empty*20} 0%")
     print(f"chan count : {chan_count}")
     chan_processed = 0
     percent = 0
     allmsg = 0
-    for chan in ctx.guild.channels:
-        if not all_chan and (chan.category is None or
-                             chan.category.id not in categories[ctx.guild.id]):
-            continue
+    for chan in list_channels:
         try:
             if (str(chan.type) != "text"):  # chan.name[0] == "_" or
                 continue
@@ -322,7 +310,7 @@ async def usage(ctx, jours=7, lim=1000, all_chan=False):
                 # msglist = await chan.history(limit=lim, after=datef).flatten()
                 # i = len(msglist)
                 async for message in chan.history(limit=lim):
-                    if message.author == bot.user:
+                    if message.author.bot:
                         continue
                     if message.created_at <= datef:
                         break
@@ -333,7 +321,7 @@ async def usage(ctx, jours=7, lim=1000, all_chan=False):
                 print(f"{chan};{i};{delta}")
                 allmsg += i
         except discord.errors.Forbidden:
-            print("forbiden channel")
+            print("forbidden channel")
             channels.pop(int(chan.id))
         except:
             print("Unexpected error:", sys.exc_info())
@@ -347,7 +335,7 @@ async def usage(ctx, jours=7, lim=1000, all_chan=False):
                 content=f"Comptage en cours veuillez patienter\n{chan_processed:2d}/{chan_count:2d} {full*percent}{empty*(20-percent)} {math.floor(chan_processed / chan_count * 100)}%"
             )
     print("---------------------------")
-    await msg.edit(content=f"{msg.content}\nGénération du graphique en court, veuillez patienter ...")
+    await msg.edit(content=f"{msg.content}\nGénération du graphique en cours, veuillez patienter ...")
     sc = 1
     c = {
         k: v
@@ -361,15 +349,16 @@ async def usage(ctx, jours=7, lim=1000, all_chan=False):
     txt = f'**__UTILISATION DES CANAUX DU SERVEUR "{ctx.guild.name.upper()}" DANS LES {jours} DERNIERS JOURS__**\n'
     for x in c:
         pourcent = round(channels[x]['score'] / allmsg * 100, 2)
+        t = ""
         if pourcent < 0.5:
-            txt += "🟥 "  #
+            t += "🟥 "  #
         elif pourcent < 2:
-            txt += "🟧 "
+            t += "🟧 "
         elif pourcent < 10:
-            txt += "🟨 "
+            t += "🟨 "
         else:
-            txt += "🟩 "
-        t = f"#{sc:2d} **{channels[x]['name']}** : **{pourcent}%** ({channels[x]['score']}) *{channels[x]['time']}ms*\n"
+            t += "🟩 "
+        t += f"#{sc:2d} **{channels[x]['name']}** : **{pourcent}%** ({channels[x]['score']}) *{channels[x]['time']}ms*\n"
         if (len(txt) + len(t)) >= 2000:
             if new_message:
                 await ctx.send(txt)
@@ -382,11 +371,9 @@ async def usage(ctx, jours=7, lim=1000, all_chan=False):
     txt += f"Nombre total de messages : {allmsg}\n"
 
     for key, value in channels.items():
-        if len(value['name']) == 1:
-            continue
-        if value['name'][1] == "-":
+        if len(value['name']) >= 2 and value['name'][1] == "-":
             value['name'] = value['name'][2:]
-        if value['name'][2] == "-":
+        if len(value['name']) >= 3 and value['name'][2] == "-":
             value['name'] = value['name'][3:]
     data = channels
     stats = sorted([(value['score'], f"{value['name']}")
@@ -396,6 +383,11 @@ async def usage(ctx, jours=7, lim=1000, all_chan=False):
     values = [key for key, value in stats]
     fig, ax = plt.subplots()
     plt.barh(labels, values, color="#ffdc54")
+
+    size = chan_count / 3
+
+    fig.set_figheight(size)
+    fig.set_figwidth(10)
 
     right_side = ax.spines["right"]
     right_side.set_visible(False)
