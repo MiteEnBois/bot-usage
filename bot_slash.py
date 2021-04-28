@@ -33,6 +33,8 @@ slash = SlashCommand(bot, sync_commands=True)
 guild_ids = [444472133842894848, 147699691377655808, 370295251983663114]
 # guild_ids = [370295251983663114, 147699691377655808]
 q_cdza = {}
+q_jdg = {}
+q_wtc = {}
 
 # with open("q_cdza.yml", encoding='utf-8') as f:
 #     data = yaml.load(f, Loader=yaml.FullLoader)
@@ -44,7 +46,6 @@ q_cdza = {}
 #     print("q_cdza chargée")
 # print(f"Temps écoulé : {round(time.time()-ttttime,1)}s")
 # ttttime = time.time()
-# q_jdg = {}
 
 # with open("q_jdg.yml", encoding='utf-8') as f:
 #     data = yaml.load(f, Loader=yaml.FullLoader)
@@ -73,6 +74,15 @@ with open("q_jdg.json", encoding='utf-8') as f:
         q_jdg = {}
     f.close()
     print("q_jdg chargée")
+
+with open("q_wtc.json", encoding='utf-8') as f:
+    data = json.load(f)
+    if data is not None:
+        q_wtc = data
+    else:
+        q_wtc = {}
+    f.close()
+    print("q_wtc chargée")
 
 # ----------------------------- FONCTIONS UTILITAIRES
 
@@ -202,6 +212,20 @@ async def cdza(ctx, phrase):
              ], guild_ids=guild_ids)
 async def jdg(ctx, phrase):
     await quotes(ctx, phrase.lower(), q_jdg)
+
+
+@slash.slash(name="wtc",
+             description="Recherche une quote de wtc et affiche celles qui sont proche de la phrase entrée",
+             options=[
+                 create_option(
+                     name="phrase",
+                     description="Notez la quote que vous recherchez",
+                     option_type=3,
+                     required=True
+                 )
+             ], guild_ids=guild_ids)
+async def wtc(ctx, phrase):
+    await quotes(ctx, phrase.lower(), q_wtc)
 
 
 @slash.slash(name="boule",
