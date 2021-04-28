@@ -484,7 +484,7 @@ async def test(ctx):
 @bot.event
 async def on_ready():
     await bot.change_presence(
-        activity=discord.Game(f"{bot.command_prefix}help"))
+        activity=discord.Game(f"with slash commands"))
     print(f'{bot.user} is connected to the following guild:')
     for guild in bot.guilds:
         print(f'-{guild.name}')
