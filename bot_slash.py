@@ -322,19 +322,20 @@ async def clear(ctx, jours):
                      required=True
                  ),
                  create_option(
-                     name="lim",
+                     name="limite",
                      description="Nombre maximum de message à compter par canal",
                      option_type=4,
                      required=True
                  )
              ], guild_ids=guild_ids)
-async def usage(ctx, jours=7, lim=5000):
+async def usage(ctx, jours, limite):
     datef = datetime.fromtimestamp(time.time()) - timedelta(days=jours)
     ttttime = time.time()
     channels = {}
     full = "█"
     empty = "░"
-
+    if limite == 0:
+        limite = None
     list_channels = []
     for c in ctx.guild.channels:
 
@@ -363,7 +364,7 @@ async def usage(ctx, jours=7, lim=5000):
                 temptime = time.time()
                 # msglist = await chan.history(limit=lim, after=datef).flatten()
                 # i = len(msglist)
-                async for message in chan.history(limit=lim):
+                async for message in chan.history(limit=limite):
                     if message.author.bot:
                         continue
                     if message.created_at <= datef:
