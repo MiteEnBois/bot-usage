@@ -130,7 +130,7 @@ def clean_message(content):
     else:
         txt = "Lien propre : "
         verification = "Lien propre : "
-    modifs = "What was removed : "
+    modifs = "Problèmes : "
     for t in finded:
         if t[-1:] == ">":
             t = t[:-1]
