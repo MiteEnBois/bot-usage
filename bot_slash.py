@@ -8,6 +8,8 @@ import re
 import json
 import difflib
 import asyncio
+from fuzzywuzzy.fuzz import ratio
+import difflib
 import requests
 from random import randint
 from datetime import datetime, timedelta
@@ -18,8 +20,10 @@ from dotenv import load_dotenv
 import matplotlib.pyplot as plt
 from w3lib.url import url_query_cleaner
 from url_normalize import url_normalize
+import copy
 
-# python -m pip -r install requirements.txt
+from fuzzywuzzy import process
+# python -m pip install -r requirements.txt
 
 # ----------------------------- SETUP VARIABLES GLOBALES ET BOT
 print("start loading")
@@ -99,7 +103,7 @@ def clean_url(url):
         return url
     # u = url_normalize(url)
     u = url
-    u = url_query_cleaner(u, parameterlist=['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content'], remove=True)
+    u = url_query_cleaner(u, parameterlist=['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 's'], remove=True)
 
     if len(u) == len(url):
         u = url
@@ -126,15 +130,49 @@ def clean_message(content):
     else:
         txt = "Lien propre : "
         verification = "Lien propre : "
+    modifs = "What was removed : "
     for t in finded:
         if t[-1:] == ">":
             t = t[:-1]
-        txt += "<" + clean_url(t) + ">\n"
+        u = clean_url(t)
+        txt += "<" + u + ">\n"
+
+        case_a = t
+        case_b = u
+
+        plus = ""
+        moins = ""
+        for li in difflib.ndiff(case_a, case_b):
+            if li[0] != ' ':
+                if li[0] == '+':
+                    plus += li[2]
+                else:
+                    moins += li[2]
+        modifs += moins
+
         verification += "<" + t + ">\n"
     if verification == txt:
         raise Exception("clean")
     else:
-        return txt
+        return txt + modifs
+
+
+def split_dict_to_multiple(input_dict, max_limit=2000):
+    """Splits dict into multiple dicts with given maximum size. 
+Returns a list of dictionaries."""
+
+    chunks = []
+    curr_dict = {}
+    for k, v in input_dict.items():
+        if len(curr_dict.keys()) < max_limit:
+            curr_dict.update({k: v})
+        else:
+            chunks.append(copy.deepcopy(curr_dict))
+            curr_dict = {k: v}
+    # update last curr_dict
+    chunks.append(curr_dict)
+    return chunks
+
 
 # ----------------------------- COMMANDES
 
@@ -186,6 +224,72 @@ async def quotes(ctx, phrase, dict):
         print("pas les bons role")
 
 
+async def newquotes(ctx, phrase, source):
+    titre = "Recherche en cours veuillez patienter"
+    msg = await ctx.send(titre)
+    if len(source) >= 5000:
+        list_s = split_dict_to_multiple(source, round(len(source) / 10))
+    else:
+        list_s = [source]
+    results = {}
+    i = 1
+    full = "█"
+    empty = "░"
+    for x in list_s:
+        Ratios = process.extract(phrase, list(x))
+        print(f"{i}/{len(list_s)}")
+        if i % 2 == 0:
+            await msg.edit(content=f"{titre}\n{full*i*2}{empty*((len(list_s)-i)*2)}")
+        for r in Ratios:
+            if r[1] < 87:
+                break
+            results[r[0]] = r[1]
+        i += 1
+    results = list(dict(sorted(results.items(), key=lambda item: item[1], reverse=True)))
+    print(results)
+    answer = ""
+    if len(results) != 1:
+        txt = "**__LISTE DES QUOTES TROUVEE__**\n"
+        emoji = [
+            "1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"
+        ]
+
+        used = {}
+        i = 0
+        for x in results:
+            txt += f"{emoji[i]} {x} -> {source[x]['title']}, à {source[x]['time']}s\n"  # ({dict[x]['ep']}&t={dict[x]['time']})
+            used[emoji[i]] = i
+            i += 1
+        await msg.edit(content=f"{txt}")
+        for x in used:
+            await msg.add_reaction(x)
+
+        def check(reaction, user):
+            return user == ctx.author and str(reaction.emoji) in used
+
+        try:
+            reaction, user = await bot.wait_for('reaction_add', timeout=40, check=check)
+        except asyncio.TimeoutError:
+            await msg.edit(content=f"Temps écoulé pour \"{phrase}\"")
+            try:
+                for x in used:
+                    await msg.clear_reaction(x)
+            except:
+                print("pas les bons role")
+            return
+        answer = results[used[reaction.emoji]]
+    else:
+        answer = results[0]
+    await msg.edit(
+        content=f"{source[answer]['ep']}&t={source[answer]['time']}"
+    )
+    try:
+        for x in used:
+            await msg.clear_reaction(x)
+    except:
+        print("pas les bons role")
+
+
 @slash.slash(name="cdza",
              description="Recherche une quote de cdza et affiche celles qui sont proche de la phrase entrée",
              options=[
@@ -212,6 +316,20 @@ async def cdza(ctx, phrase):
              ], guild_ids=guild_ids)
 async def jdg(ctx, phrase):
     await quotes(ctx, phrase.lower(), q_jdg)
+
+
+@slash.slash(name="testjdg",
+             description="Ne marche pas a priori",  # "Recherche une quote de jdg et affiche celles qui sont proche de la phrase entrée",
+             options=[
+                 create_option(
+                     name="phrase",
+                     description="Notez la quote que vous recherchez",
+                     option_type=3,
+                     required=True
+                 )
+             ], guild_ids=guild_ids)
+async def testjdg(ctx, phrase):
+    await newquotes(ctx, phrase.lower(), q_jdg)
 
 
 @slash.slash(name="wtc",
@@ -534,10 +652,12 @@ async def on_ready():
 #             else:
 #                 return "Pourquoi tu me demande? J'ai l'air d'être ton ami?"
 
+ignored = ["147700545006600192"]
+
 
 @bot.event
 async def on_message(message):
-    if message.author == bot.user:
+    if message.author == bot.user or message.author in ignored:
         return
     try:
         clean = clean_message(message.content)
@@ -551,7 +671,7 @@ async def on_message(message):
         await bot.process_commands(message)
         return
     await message.channel.send(clean)
-    await message.add_reaction("👎")
+    # await message.add_reaction("👎")
     await bot.process_commands(message)
     # msg = reponses_timbot(message)
     # if msg is not None:
