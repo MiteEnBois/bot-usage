@@ -103,7 +103,7 @@ def clean_url(url):
         return url
     # u = url_normalize(url)
     u = url
-    u = url_query_cleaner(u, parameterlist=['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 's'], remove=True)
+    u = url_query_cleaner(u, parameterlist=['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 's'], remove=True, keep_fragments=True)
 
     if len(u) == len(url):
         u = url
