@@ -652,12 +652,12 @@ async def on_ready():
 #             else:
 #                 return "Pourquoi tu me demande? J'ai l'air d'être ton ami?"
 
-ignored = ["147700545006600192"]
+ignored = [147700545006600192]
 
 
 @bot.event
 async def on_message(message):
-    if message.author == bot.user or message.author in ignored:
+    if message.author == bot.user or message.author.id in ignored:
         return
     try:
         clean = clean_message(message.content)
