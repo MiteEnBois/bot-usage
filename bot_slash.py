@@ -113,10 +113,13 @@ def clean_url(url):
     #     u = response.url
     if "https://www.google.com/url?q=" in u:
         u = clean_url(u.replace("https://www.google.com/url?q=", ""))
-    ancre = re.search(r"\#\w*$", url)
-    if ancre is not None and ancre.group(0) not in u:
-        u = u + ancre.group(0)
-    return u
+    # ancre = re.search(r"\#\w*$", url)
+    # if ancre is not None and ancre.group(0) not in u:
+    #     u = u + ancre.group(0)
+    if u[-1:] == '#':
+        return u[:-1]
+    else:
+        return u
 
 
 def clean_message(content):
