@@ -104,6 +104,8 @@ def clean_url(url):
     # u = url_normalize(url)
     u = url
     u = url_query_cleaner(u, parameterlist=['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 's'], remove=True, keep_fragments=True)
+    if "cdn.discordapp.com" in u:
+        u = u.replace("cdn.discordapp.com", "media.discordapp.net")
 
     if len(u) == len(url):
         u = url
@@ -138,7 +140,14 @@ def clean_message(content):
         if t[-1:] == ">":
             t = t[:-1]
         u = clean_url(t)
-        txt += "<" + u + ">\n"
+        if "media.discordapp.net" in u:
+            txt += u + "\n"
+
+            verification += t + "\n"
+        else:
+            txt += "<" + u + ">\n"
+
+            verification += "<" + t + ">\n"
 
         case_a = t
         case_b = u
@@ -153,10 +162,11 @@ def clean_message(content):
                     moins += li[2]
         modifs += moins
 
-        verification += "<" + t + ">\n"
     if verification == txt:
         raise Exception("clean")
     else:
+        if "media.discordapp.net" in txt:
+            return txt
         return txt + modifs
 
 
