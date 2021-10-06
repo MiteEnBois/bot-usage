@@ -103,9 +103,9 @@ def clean_url(url):
         return url
     # u = url_normalize(url)
     u = url
-    u = url_query_cleaner(u, parameterlist=['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 's'], remove=True, keep_fragments=True)
-    if "cdn.discordapp.com" in u and ".gif" in u:
-        u = u.replace("cdn.discordapp.com", "media.discordapp.net")
+    u = url_query_cleaner(u, parameterlist=['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content'], remove=True, keep_fragments=True)
+    # if "cdn.discordapp.com" in u and ".gif" in u:
+    #     u = u.replace("cdn.discordapp.com", "media.discordapp.net")
 
     if len(u) == len(url):
         u = url
