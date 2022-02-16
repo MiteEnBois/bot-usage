@@ -770,7 +770,7 @@ async def on_ready():
     for guild in bot.guilds:
         print(f'-{guild.name}')
     print(f'{bot.user} has started')
-    # await bot.get_guild(int(os.getenv('ERROR_GUILD'))).get_channel(int(os.getenv('ERROR_CHANNEL'))).send("Bot Loaded")
+    await bot.get_guild(int(os.getenv('ERROR_GUILD'))).get_channel(int(os.getenv('ERROR_CHANNEL'))).send("Bot Loaded")
 
 
 @bot.event
