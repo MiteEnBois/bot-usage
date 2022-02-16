@@ -1,3 +1,4 @@
+from email import message
 import os
 import io
 import discord
@@ -16,6 +17,7 @@ from datetime import datetime, timedelta
 from discord.ext import commands
 from discord_slash import SlashCommand, SlashContext
 from discord_slash.utils.manage_commands import create_option
+from discord import Intents
 from dotenv import load_dotenv
 import matplotlib.pyplot as plt
 from w3lib.url import url_query_cleaner
@@ -30,8 +32,12 @@ print("start loading")
 
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
+intents = Intents.default()
+intents.reactions = True
 
-bot = commands.Bot(command_prefix=';')
+intents.members = True
+
+bot = commands.Bot(command_prefix=';', intents=intents)
 slash = SlashCommand(bot, sync_commands=True)
 
 guild_ids = [444472133842894848, 147699691377655808, 370295251983663114]
@@ -39,6 +45,7 @@ guild_ids = [444472133842894848, 147699691377655808, 370295251983663114]
 q_cdza = {}
 q_jdg = {}
 q_wtc = {}
+reaction_roles = {}
 
 # with open("q_cdza.yml", encoding='utf-8') as f:
 #     data = yaml.load(f, Loader=yaml.FullLoader)
@@ -87,6 +94,15 @@ with open("q_wtc.json", encoding='utf-8') as f:
         q_wtc = {}
     f.close()
     print("q_wtc chargée")
+
+with open("reaction_roles.json", encoding='utf-8') as f:
+    data = json.load(f)
+    if data is not None:
+        reaction_roles = data
+    else:
+        reaction_roles = {}
+    f.close()
+    print("reaction_roles chargée")
 
 # ----------------------------- FONCTIONS UTILITAIRES
 
@@ -632,9 +648,118 @@ async def test(ctx):
     print(ctx)
 
 
+def check_role(ctx, rolestr):
+    pure_id = re.search("^(\d{18})$", rolestr)
+    from_mention = re.search("^<@&(\d{18})>$", rolestr)
+    roleid = 0
+    if pure_id:
+        roleid = int(pure_id.group(1))
+    elif from_mention:
+        roleid = int(from_mention.group(1))
+    if roleid == 0:
+        return None
+    return ctx.guild.get_role(roleid)
+
+
+@slash.slash(name="creerreactionrole",
+             description="Créé un message de reaction",
+             options=[
+                 create_option(
+                     name="message",
+                     description="L'id du message qu'il faut lier",
+                     option_type=3,
+                     required=True
+                 ),
+                 create_option(
+                     name="role",
+                     description="Le role que vous voulez rajouter",
+                     option_type=3,
+                     required=True
+                 )
+             ],
+             guild_ids=guild_ids)
+async def creerreactionrole(ctx, message, role):
+    r = check_role(ctx, role)
+    if not r:
+        await ctx.send("Role incorrect")
+        return
+    reaction_roles[message] = r.id
+    await ctx.send("Message lié!")
+    with open('reaction_roles.json', 'w+', encoding='utf-8') as outfile:
+        outfile.truncate(0)
+        json.dump(reaction_roles, outfile, indent=4)
+    return
+
+
+@slash.slash(name="changerreactionrole",
+             description="Change le role lié à un message",
+             options=[
+                 create_option(
+                     name="message",
+                     description="L'id du message qu'il faut lier",
+                     option_type=3,
+                     required=True
+                 ),
+                 create_option(
+                     name="role",
+                     description="Le nouveau role que vous voulez rajouter",
+                     option_type=3,
+                     required=True
+                 )
+             ],
+             guild_ids=guild_ids)
+async def changerreactionrole(ctx, message, role):
+    r = check_role(ctx, role)
+    if not r:
+        await ctx.send("Role incorrect")
+        return
+    reaction_roles[message] = r.id
+    await ctx.send("Role changé!")
+    with open('reaction_roles.json', 'w+', encoding='utf-8') as outfile:
+        outfile.truncate(0)
+        json.dump(reaction_roles, outfile, indent=4)
+    return
+
+
+@slash.slash(name="supprimerreactionrole",
+             description="Supprime un message de reaction",
+             options=[
+                 create_option(
+                     name="message",
+                     description="L'id du message qu'il faut lier",
+                     option_type=3,
+                     required=True
+                 )
+             ],
+             guild_ids=guild_ids)
+async def supprimerreactionrole(ctx, message):
+    reaction_roles.pop(message)
+    await ctx.send("Lien supprimé!")
+    with open('reaction_roles.json', 'w+', encoding='utf-8') as outfile:
+        outfile.truncate(0)
+        json.dump(reaction_roles, outfile, indent=4)
+    return
 # ----------------------------- FIN SETUP
 
 # S'execute quand le bot est prêt; Affiche la liste des serveurs sur lesquelles le bot est actuellement
+
+
+@bot.event
+async def on_raw_reaction_add(payload):
+    if str(payload.message_id) in reaction_roles:
+        guild = bot.get_guild(payload.guild_id)
+        role = guild.get_role(int(reaction_roles[str(payload.message_id)]))
+        await payload.member.add_roles(role)
+    return
+
+
+@bot.event
+async def on_raw_reaction_remove(payload):
+    if str(payload.message_id) in reaction_roles:
+        guild = bot.get_guild(payload.guild_id)
+        member = guild.get_member(payload.user_id)
+        role = guild.get_role(int(reaction_roles[str(payload.message_id)]))
+        await member.remove_roles(role)
 
 
 @bot.event
@@ -645,7 +770,7 @@ async def on_ready():
     for guild in bot.guilds:
         print(f'-{guild.name}')
     print(f'{bot.user} has started')
-    await bot.get_guild(int(os.getenv('ERROR_GUILD'))).get_channel(int(os.getenv('ERROR_CHANNEL'))).send("Bot Loaded")
+    # await bot.get_guild(int(os.getenv('ERROR_GUILD'))).get_channel(int(os.getenv('ERROR_CHANNEL'))).send("Bot Loaded")
 
 
 @bot.event
